@@ -1,0 +1,4 @@
+Create a docx file with Time New Roman font with font size 14pt, and
+write a short tutorial on podman configuration for a react fastapi 
+python stack, and list the podman comands to build backend and frontend,
+and to run backend and frontend, and to test backend and frontend.

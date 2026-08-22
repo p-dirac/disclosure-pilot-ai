@@ -1,0 +1,9 @@
+Can you create a new agent called notes_agent.py, similar to
+mda_agent.py, using chatollama to generate the 10-K and 10-Q
+Notes on Financial Statements.
+
+On the frontend, add a Generate Notes button after the Submit MDA,
+then add the note edit panel, and below that, add a Submit Notes button.
+
+The 10-K notes file is named item082-Notes-to-Financial-Statements.docx
+The 10-Q notes file is named item011-Notes-to-Financial-Statements.docx

@@ -1,0 +1,4 @@
+Frontend Navbar changes:
+Background color light blue: #CBE6EF, and text color black
+For 10-Q items, change to drop down 10-Q menu, with Prep, Report, EDGAR.
+For 10-K items, change to drop down 10-K menu, with Prep, Report, EDGAR.

@@ -1,0 +1,20 @@
+/disclosure-pilot-ai/
+├── backend/
+│   ├── app/
+│   │   ├── agents/    # AI agent implementations
+│   │   ├── api/       # FastAPI route handlers & endpoints
+│   │   ├── core/      # App configurations, security, & database setup
+│   │   ├── models/    # User authenticaton database ORM model (SQLAlchemy)
+│   │   ├── schemas/   # Input/output validation contracts (Pydantic)
+│   │   └── services/  # Core business logic layer, database ORM models (SQLAlchemy)
+│   └── tests/      # Backend unit & integration test suites
+├── docs/       # Project description and setup
+└── frontend/
+    ├── dist/     # index files
+    └── src/
+        ├── api/         # Axios clients & HTTP wrappers
+        ├── components/  # UI widgets: menus, tables, editors, dialogs
+        ├── hooks/       # User authenticaton context
+        ├── pages/       # Top-level views
+        ├── styles/      # Global CSS module
+        └── tests/       # Frontend UI & unit tests

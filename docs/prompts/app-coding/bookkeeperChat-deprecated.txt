@@ -1,0 +1,58 @@
+
+Objective:
+Create a full stack Windows application for creating quarterly and
+annual financial reports.
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Recharts |
+| Backend | FastAPI, Uvicorn, Python 3.11 |
+| ORM | SQLAlchemy 2.0 |
+| Validation | Pydantic v2 |
+| Database | PostgreSQL 18 |
+| AI Workflow | LangGraph, LangChain |
+| LLM | ChatOllama (gemma3) |
+| Docx Generation | python-docx
+| PDF Generation | ReportLab |
+| Containerization | Podman / Containerfile |
+
+
+Frontend Requirements:
+Use ReactJS, with horizontal navigation bar.
+Allow user to select quarterly or annual financial report.
+Allow user input for year and quarter.
+
+Provide the user with charts for revenue, expense, profit trends by quarter.
+Provide the user with revenue summary table by customer and quarter.
+Provide the user with expense summary table by vendor and quarter.
+Allow the user to modify or approve the executive summary before 
+creating the final report.
+
+
+Backend Requirements:
+The financial data is already stored in a PostgreSql database with 
+table definitions are listed in doc.
+
+
+Do not initialize the database tables.
+Use fastapi, uvicorn, Python classes, Langgraph, SQLAlchemy,
+and PostgreSql.
+
+Use SQLAlchemy to interface with the database.
+
+In sqlalchemy database queries, use stmt = select(func…).where(...) and self.db.execute(stmt).scalar() format, rather than self.db.query(func…).filter(...) and query.scalar() format.
+
+Use Python class structures.
+Perform all math calculations in Python.
+In main.py map “/” to the frontend index.html file.
+Use Pydantic schemas for API request/response validation.
+Use NVIDIA Container Toolkit for GPU CUDA support.
+Use ChatOllama for the LLM to create the executive summary.
+Use Reportlab to create PDF file.
+
+Create a multi-agent LangGraph workflow to generate PDF quarterly 
+and annual financial reports.
+
+Create test files with pytest, fastapi.testclient, and unittest.mock. Describe how to run the test cases in the README.md file.
+
+Create a Containerfile for Podman. Configure podman to connect to an existing postgresql database running on windows 11.

@@ -1,0 +1,15 @@
+
+prompt for 10-K signature page
+
+For a company named Time Flux LLC, create a 10-K signature pdf page
+using fictitious names, for the following executive titles, for the 
+date December 31, 2025. Do not wrap the date. Use font Times New Roman
+and font size 10 pt.
+
+Chief Executive Officer
+Chief Financial Officer
+Chief Accounting Officer
+Director
+Director
+Director
+Director

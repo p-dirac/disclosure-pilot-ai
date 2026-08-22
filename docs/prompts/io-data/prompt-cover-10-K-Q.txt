@@ -1,0 +1,25 @@
+
+prompt for 10-K cover page, use Gemini to pdf, and convertio.co/pdf-odt/
+
+Create a 10-K cover pdf page, using the following information.
+
+The company is named Time Flux LLC, located at 123 Ivy Lane, Columbia,
+MD 21045, with EIN 31-1234567, telephone 301-123-1234.
+Securities: common stock, without par value, trading symbol TFX, on New
+York Stock Exchange.
+Use font Times New Roman and font size 10 pt.
+
+
+
+prompt for 10-Q cover page
+
+Create a 10-Q cover pdf page, using the following information.
+
+Commission File Number: 001-14321
+Quarterly period ending June 30, 2025.
+The small company is named Time Flux LLC, located at 123 Ivy Lane, Columbia,
+MD 21045, with EIN 31-1234567, telephone 301-123-1234.
+Securities: common stock, without par value, trading symbol TFX, on New
+York Stock Exchange.
+Use font Times New Roman and font size 10 pt.
+

@@ -1,0 +1,13 @@
+Read the attached file for an AI agent.
+Create a docx file with font Times New Roman, font size 14pt, 
+and using the attached code as an example, write a short tutorial
+ explaining what an AI agent is, what the benefit is, how to code it,
+ what the input is, what it does to the input to create output, and
+ what the output is.
+ Mention how LLM creates narrative from training:
+ Recognizes the genre — it's been trained on thousands of real 10-K MD&As, 
+ so it knows the SEC boilerplate ("Forward-Looking Statements disclaimer,"
+ "Liquidity and Capital Resources", etc.).
+Fills the outline — it takes your headings and expands each one into 
+paragraphs, weaving in the numbers you gave it (e.g. $70M revenue, $3.4M operating
+ cash). 

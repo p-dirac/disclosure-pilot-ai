@@ -1,0 +1,6 @@
+For the 10-Q and 10-K , the SEC requires xbrl xhtml format.
+ Research how we can create a postprocessor functon to add
+ xbrl tagging to the 10-Q 10-K html files. 
+ First, we need us-gaap mappings like this: 
+ "accounts receivable":"us-gaap:AccountsReceivableNetCurrent".
+ Second, we need to parse the html and add the special xbrl tags.

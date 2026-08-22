@@ -1,0 +1,10 @@
+The docker-compose.yml file should contain two services, backend 
+and frontend.
+
+The backend sevice should contain the following environment.
+
+environment:
+      # PostgreSQL on Windows host — DB_HOST set in .env (Windows LAN IP)
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}/${DB_NAME:-finreport}?${DB_OPTIONS}
+      # Ollama on Windows host — OLLAMA_HOST set in .env (same as Windows LAN IP)
+      OLLAMA_BASE_URL: http://${OLLAMA_HOST:-127.0.0.1}:${OLLAMA_PORT:-11434}

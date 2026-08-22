@@ -1,0 +1,18 @@
+Read the attached file, meta-ai-instructions.docx, and follow the 
+instructions carefully.
+
+Read the attached file, meta-ai-instructions.docx,and check if an LLM
+could follow the instructions. Give advice to improve the instructions.
+
+Can you put the complete script code and workbook into a zip file for download?
+
+For the complete workbook, display the full code inside a standard text
+ markdown block so I can copy and paste it manually.
+ 
+Can you read the attached generated spreadsheet, and convert each sheet
+ into a csv file, and download all csv files in a zip file? 
+
+Coding issues, not following instructions:
+On income sheet, missing interest income, income tax.
+On balance sheet, missing short term investments, treasury stock, 
+dividends paid.  On cash flow sheet financing activities all zero.

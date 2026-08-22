@@ -1,0 +1,199 @@
+
+Create an accounting excel spreadsheet, as follows:
+Create transactions for each of the accounting database tables below,
+based on Generally Accepted Accounting Principles (GAAP).
+In the general_ledger, create 1000 transactions per year
+over 4 years: 2022, 2023, 2024,2025, with some random variations in the dollar 
+amounts. In each year, generate total revenues greater than total expenses, 
+and make each years' total revenues increase each year.
+Create duplicate ids for each general ledger credit debit paired transaction.
+ Record amounts as whole dollar values without quotes.
+ Record dollar values without any comma.
+ For each year, create several transactions for every account listed in the 
+ chart of accounts.
+ For assets, create 8 random entries for different dept, in year 2022 and 2023.
+  Be sure that for each year: Assets = Liabilities + Equity
+ 
+ The data in chart of accounts, customers, and vendors will be
+ prepopulated as follows:
+ 
+ The chart of accounts will have the following entries:
+ "account","acct_name","category"
+1010,"Cash and Equivalents","Asset"
+1100,"Accounts Receivable","Asset"
+1200,"Inventory","Asset"
+1300,"Prepaid Expenses","Asset"
+1500,"Property, Plant & Equip","Asset"
+1550,"Accumulated Depreciation","Asset"
+2000,"Accounts Payable","Liability"
+2100,"Accrued Liabilities","Liability"
+2200,"Short-term Debt","Liability"
+2500,"Long-term Debt","Liability"
+3000,"Common Stock","Equity"
+3100,"Retained Earnings","Equity"
+3200,"Treasury Stock","Equity"
+4000,"Product Revenue","Revenue"
+4100,"Service Revenue","Revenue"
+5000,"Cost of Goods Sold","Expense"
+6000,"Salaries and Wages","Expense"
+6100,"Rent Expense","Expense"
+6200,"Marketing Expense","Expense"
+6300,"R&D Expense","Expense"
+6400,"Depreciation Expense","Expense"
+6500,"Interest Expense","Expense"
+7000,"Income Tax Expense","Expense"
+
+The cutomers table will have the following entrie:
+customer_id,customer_name
+CUST001,BluePeak Retail
+CUST002,Northwind Labs
+CUST003,Summit Health
+CUST004,Riverstone Foods
+CUST005,Vertex Logistics
+CUST006,Orion Services
+CUST007,Silverline Tech
+CUST008,Pioneer Telecom
+CUST009,Metro Supply
+CUST010,GreenField Energy
+
+The vendors table will have the following entries:
+vendor_id,vendor_name
+VEND001,Atlas Manufacturing
+VEND002,Prime Office Supply
+VEND003,Skyline Properties
+VEND004,Quantum Marketing
+VEND005,Nova Research
+VEND006,Capital Bank
+VEND007,Precision Parts
+VEND008,Velocity Staffing
+VEND009,Ironwood Equipment
+VEND010,Summit Insurance
+
+
+--
+-- Name: accounts_payable; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.accounts_payable (
+    ap_id character varying(15) NOT NULL,
+    vendor_id character varying(15),
+    invoice_date date,
+    due_date date,
+    amount numeric,
+    status character varying(10),
+    currency character varying(3) DEFAULT 'USD'::character varying,
+	CONSTRAINT accounts_payable_pkey PRIMARY KEY (ap_id)
+);
+
+
+--
+-- Name: accounts_receivable; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.accounts_receivable (
+    ar_id character varying(15) NOT NULL,
+    customer_id character varying(15),
+    invoice_date date,
+    due_date date,
+    amount numeric,
+    status character varying(10),
+    currency character varying(3) DEFAULT 'USD'::character varying,
+	CONSTRAINT accounts_receivable_pkey PRIMARY KEY (ar_id)
+);
+
+
+--
+-- Name: assets; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.assets (
+    asset_id character varying(15) NOT NULL,
+    asset_name character varying(30),
+    puchase_date date,
+    cost numeric,
+    service_years integer,
+    dept character varying(15),
+    currency character varying(3) DEFAULT 'USD'::character varying,
+	CONSTRAINT assets_pkey PRIMARY KEY (asset_id)
+);
+
+
+--
+-- Name: budgets; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.budgets (
+    budget_id character varying(15) NOT NULL,
+    dept character varying(15),
+    year integer,
+    amount numeric,
+	CONSTRAINT budgets_pkey PRIMARY KEY (budget_id)
+);
+
+
+
+--
+-- Name: chart_of_acct; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.chart_of_acct (
+    account integer NOT NULL,
+    acct_name character varying(30),
+    category character varying(15),
+	CONSTRAINT chart_of_acct_pkey PRIMARY KEY (account)
+);
+
+
+--
+-- Name: customers; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.customers (
+    customer_id character varying(15) NOT NULL,
+    customer_name character varying(30),
+	CONSTRAINT customers_pkey PRIMARY KEY (customer_id)
+);
+
+
+--
+-- Name: depreciation; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.depreciation (
+    depreciation_id character varying(10) NOT NULL,
+    asset_id character varying(15),
+    year integer,
+    amount numeric,
+    currency character varying(3) DEFAULT 'USD'::character varying,
+	CONSTRAINT depreciation_pkey PRIMARY KEY (depreciation_id)
+);
+
+
+--
+-- Name: general_ledger; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.general_ledger (
+    gl_id character varying(10) NOT NULL,
+    date date,
+    account integer NOT NULL,
+    debit numeric,
+    credit numeric,
+    description character varying(50),
+    currency character varying(3) DEFAULT 'USD'::character varying,
+	CONSTRAINT general_ledger_pkey PRIMARY KEY (gl_id, account)
+);
+
+
+
+--
+-- Name: vendors; Type: TABLE; Schema: bookkeeper; Owner: postgres
+--
+
+CREATE TABLE bookkeeper.vendors (
+    vendor_id character varying(15) NOT NULL,
+    vendor_name character varying(30),
+	CONSTRAINT vendors_pkey PRIMARY KEY (vendor_id)
+);
+
+

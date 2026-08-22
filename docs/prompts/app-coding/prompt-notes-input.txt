@@ -1,0 +1,6 @@
+In Prep10KPage.jsx and Prep10QPage.jsx,
+above the Generate Notes button,
+add two text inputs:
+shares_outstanding
+income_tax_rate
+Update client.js and notes_agent.py
