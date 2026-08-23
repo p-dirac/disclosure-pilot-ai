@@ -150,11 +150,13 @@ Write-Host "== Preflight connectivity check ==" -ForegroundColor Cyan
 # that something is listening on that host/port).
 $dbHost = [System.Environment]::GetEnvironmentVariable("DB_HOST", "Process")
 $dbPort = [System.Environment]::GetEnvironmentVariable("DB_PORT", "Process")
+Write-Host "dbHost: " $dbHost "dbPort: " $dbPort
 $results += Test-TcpPort "PostgreSQL" $dbHost $dbPort $TimeoutSeconds
 
 # Ollama - hits its tags endpoint, which responds even with no model loaded.
 $ollamaBase = [System.Environment]::GetEnvironmentVariable("OLLAMA_BASE_URL", "Process")
 $ollamaUrl  = if ($ollamaBase) { "$ollamaBase/api/tags" } else { $null }
+Write-Host "ollamaUrl: " $ollamaUrl
 $results += Test-HttpEndpoint "Ollama" $ollamaUrl $TimeoutSeconds
 
 # Arelle taxonomy host - defaults to the us-gaap-2026 schemaLocation your
@@ -164,6 +166,7 @@ $arelleUrl = [System.Environment]::GetEnvironmentVariable("ARELLE_TAXONOMY_URL",
 if (-not $arelleUrl) {
     $arelleUrl = "https://xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd"
 }
+Write-Host "arelleUrl: " $arelleUrl
 $results += Test-HttpEndpoint "Arelle taxonomy host" $arelleUrl $TimeoutSeconds
 
 Write-Host ""

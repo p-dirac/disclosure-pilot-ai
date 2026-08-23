@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     # ── Database ──────────────────────────────────────────────────────────────
-    DATABASE_URL: str = "postgresql://postgres:password@127.0.0.1:5432/postgres"
+    DATABASE_URL: str = "postgresql://user:password@127.0.0.1:5432/dbname"
 
     # ── Ollama ────────────────────────────────────────────────────────────────
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
