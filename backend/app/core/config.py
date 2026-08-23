@@ -1,8 +1,7 @@
 """
 Application configuration — loaded from environment variables / .env file.
-All DATA_* paths are container-internal Linux paths.
-All WIN_*  paths are Windows host paths (used only for reference; the
-docker-compose volume bind-mounts keep them in sync automatically).
+All DATA_* paths are Windows host paths.
+All WIN_*  paths are Windows host paths.
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

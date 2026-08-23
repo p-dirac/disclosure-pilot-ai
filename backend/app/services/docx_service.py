@@ -4,11 +4,9 @@ Handles creation of item files and final merged reports.
 
 Path strategy
 ─────────────
-The backend runs inside a Linux container.  All file I/O uses the
-DATA_* paths (e.g. /tmp/appio/sec10k/part2) defined in .env.
-docker-compose.yml bind-mounts those container paths to the
-corresponding WIN_* Windows host paths (e.g. C:\\AppIO\\sec10k\\part2),
-so files written by the container appear on the host automatically.
+The backend runs on Windows.  All file I/O uses the
+DATA_* paths defined in .env.
+(e.g. C:\\AppIO\\sec10k\\part2),
 """
 import os
 import re
