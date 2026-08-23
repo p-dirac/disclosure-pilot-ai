@@ -959,6 +959,12 @@ def create_10q_edgar_html(output_filename: str, quarter: int) -> str:
     # note's own <h3>, etc.) is left-aligned in Ron's source docx files.
     body_html = _reset_h3_align_left("\n".join(body_parts))
 
+    # TOC <-> section jump links: needs the intro (TOC) and body (section
+    # headings) together in one pass, but must stay OUTSIDE the
+    # DOCTYPE/meta/<style> wrapper below — see
+    # _add_toc_navigation_links()'s docstring.
+    linked_intro_and_body = _add_toc_navigation_links(intro_html + "\n" + body_html)
+
     html_parts = [
         "<?xml version='1.0' encoding='UTF-8'?>",
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" "
@@ -970,9 +976,8 @@ def create_10q_edgar_html(output_filename: str, quarter: int) -> str:
         "<style type='text/css'>", _EDGAR_CSS, "</style>",
         "</head>",
         "<body>",
-        intro_html,
+        linked_intro_and_body,
     ]
-    html_parts.append(body_html)
     html_parts.extend(["</body>", "</html>"])
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -1806,6 +1811,118 @@ def _reset_h3_align_left(body_html: str) -> str:
     return str(soup)
 
 
+_TOC_PART_RE = re.compile(r'^\s*PART\s+([IVXLCDM]+)\b', re.IGNORECASE)
+_TOC_ITEM_RE = re.compile(r'^\s*Item\s+(\d+[A-Za-z]?)\.', re.IGNORECASE)
+
+
+def _add_toc_navigation_links(combined_html: str) -> str:
+    """
+    Give every "Item N." / part heading in the BODY an id="..." anchor, and
+    turn the matching row in the Table of Contents (in the intro fragment)
+    into a link to that anchor — so a reader can click any TOC entry and
+    jump straight to the section, the way real EDGAR filings do. No page
+    numbers are involved; this is pure in-document navigation.
+
+    Must run on the INTRO + BODY fragments concatenated together (both are
+    needed — anchors are assigned in the body, links point at them from
+    the intro) but never on the full assembled document (with its
+    DOCTYPE/meta/<style> block): BeautifulSoup's html.parser round-trip
+    normalizes things like self-closing tags, which is fine for a bare
+    fragment (see _reset_h3_align_left's docstring for the same
+    reasoning) but must not be risked against the parts of the document
+    EDGAR/Arelle parsing is strict about.
+
+    10-Q filings reuse "Item 1.", "Item 2.", etc. under BOTH Part I and
+    Part II, so anchors are qualified by the most recently seen "PART n"
+    heading (e.g. part-i-item-1 vs part-ii-item-1) rather than by item
+    number alone.
+    """
+    soup = BeautifulSoup(combined_html, "html.parser")
+
+    # ---- Pass 1: body headings — assign ids ----
+    current_part = None
+    slug_for = {}  # (part_token, item_token) -> slug, in first-seen order
+
+    for el in soup.find_all(['h3', 'p']):
+        if el.find_parent('table') is not None:
+            continue  # TOC rows are handled in Pass 2
+        text = el.get_text().strip()
+        if not text:
+            continue
+
+        if el.name == 'h3':
+            part_match = _TOC_PART_RE.match(text)
+            if part_match:
+                current_part = part_match.group(1).upper()
+                continue
+            if text.upper().startswith('SIGNATURES'):
+                el['id'] = 'signatures'
+                continue
+
+        item_match = _TOC_ITEM_RE.match(text)
+        if item_match:
+            item_token = item_match.group(1).upper()
+            key = (current_part, item_token)
+            if key not in slug_for:
+                slug = f"part-{(current_part or 'x').lower()}-item-{item_token.lower()}"
+                el['id'] = slug
+                slug_for[key] = slug
+
+    # ---- Pass 2: TOC tables — wrap matching cells in <a href="#slug"> ----
+    current_part = None
+    for el in soup.find_all(['p', 'table']):
+        if el.name == 'p':
+            text = el.get_text().strip()
+            part_match = _TOC_PART_RE.match(text)
+            if part_match:
+                current_part = part_match.group(1).upper()
+            continue
+
+        rows = el.find_all('tr')
+        if not rows:
+            continue
+        first_cells = [r.find(['td', 'th']) for r in rows]
+        if not all(fc is not None for fc in first_cells):
+            continue
+        first_texts = [fc.get_text().strip() for fc in first_cells]
+        looks_like_toc = bool(first_texts) and any(first_texts) and all(
+            _TOC_ITEM_RE.match(t) or t == "" for t in first_texts
+        )
+        if not looks_like_toc:
+            continue
+
+        for row in rows:
+            cells = row.find_all(['td', 'th'])
+            if len(cells) < 2:
+                continue
+            item_cell, desc_cell = cells[0], cells[1]
+            item_text = item_cell.get_text().strip()
+            desc_text = desc_cell.get_text().strip()
+
+            if item_text == "" and desc_text.upper().startswith("SIGNATURES"):
+                slug = "signatures"
+            else:
+                item_match = _TOC_ITEM_RE.match(item_text)
+                if not item_match:
+                    continue
+                slug = slug_for.get((current_part, item_match.group(1).upper()))
+                if not slug:
+                    continue
+
+            for cell in (item_cell, desc_cell):
+                if not cell.get_text().strip():
+                    continue
+                a_tag = soup.new_tag(
+                    'a', href=f"#{slug}",
+                    style="color: #0000ff; text-decoration: underline;"
+                )
+                for child in list(cell.contents):
+                    a_tag.append(child.extract())
+                cell.append(a_tag)
+
+    return str(soup)
+
+
 def create_10k_edgar_html(output_filename: str = "sec-10k.htm") -> str:
     """
     Build the final EDGAR HTML by merging TWO separately-generated pieces,
@@ -1862,6 +1979,12 @@ def create_10k_edgar_html(output_filename: str = "sec-10k.htm") -> str:
     # _reset_h3_align_left's docstring.
     body_html = _reset_h3_align_left("\n".join(body_parts))
 
+    # TOC <-> section jump links: needs the intro (TOC) and body (section
+    # headings) together in one pass, but must stay OUTSIDE the
+    # DOCTYPE/meta/<style> wrapper below — see
+    # _add_toc_navigation_links()'s docstring.
+    linked_intro_and_body = _add_toc_navigation_links(intro_html + "\n" + body_html)
+
     html_parts = [
         "<?xml version='1.0' encoding='UTF-8'?>",
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" "
@@ -1873,9 +1996,8 @@ def create_10k_edgar_html(output_filename: str = "sec-10k.htm") -> str:
         "<style type='text/css'>", _EDGAR_CSS, "</style>",
         "</head>",
         "<body>",
-        intro_html,
+        linked_intro_and_body,
     ]
-    html_parts.append(body_html)
     html_parts.extend(["</body>", "</html>"])
 
     with open(output_path, "w", encoding="utf-8") as f:
