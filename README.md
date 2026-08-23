@@ -16,8 +16,8 @@ Disclosure Pilot AI is a full-stack desktop application that demonstrates using 
 
 | Category | Technologies / Tools |
 | --- | --- |
-| **Frontend** | React 18, Vite, Recharts |
-| **Backend** | FastAPI, Uvicorn, Python 3.13 |
+| **Frontend** | React 18, Vite, Axios, Recharts |
+| **Backend** | FastAPI, Uvicorn, SqlAlchemy, Python 3.13 |
 | **Database** | PostgreSQL 18 (read-only financial ledger) |
 | **AI & Agent Orchestration** | ChatOllama, LangGraph, LangChain |
 | **Document Processing** | `python-docx`, `docxcompose`, custom iXBRL postprocessor (`xbrl_tagger.py`) |
