@@ -1,7 +1,6 @@
 """10-K report API endpoints."""
 import os
 import re
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
