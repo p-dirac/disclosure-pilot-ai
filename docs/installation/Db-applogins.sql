@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict m4SF9HhwMEkrXuq3jX8yLU3leZihb9iH9McBNAr9l1EUasJvi0gqR7pjQVbs7dT
+--\restrict m4SF9HhwMEkrXuq3jX8yLU3leZihb9iH9McBNAr9l1EUasJvi0gqR7pjQVbs7dT
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
@@ -140,5 +140,5 @@ GRANT ALL ON SEQUENCE applogins.app_users_id_seq TO user_10qk;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict m4SF9HhwMEkrXuq3jX8yLU3leZihb9iH9McBNAr9l1EUasJvi0gqR7pjQVbs7dT
+--\unrestrict m4SF9HhwMEkrXuq3jX8yLU3leZihb9iH9McBNAr9l1EUasJvi0gqR7pjQVbs7dT
 

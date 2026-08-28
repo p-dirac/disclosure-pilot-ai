@@ -40,7 +40,7 @@ _REPORT_FILENAME_RE = re.compile(r"^sec-10k-(\d{4})\.docx$")
 
 
 class ReportsListResponse(BaseModel):
-    filenames: List[str]
+    filenames: list[str]
 
 
 class GenerateEdgarHtmlRequest(BaseModel):

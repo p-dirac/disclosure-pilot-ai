@@ -127,4 +127,4 @@ New-Item -ItemType Directory -Path $StaticDir | Out-Null
 Copy-Item (Join-Path $DistDir "*") $StaticDir -Recurse -Force
 
 Write-Host "== Install complete ==" -ForegroundColor Green
-Write-Host "Next: copy .env.example to .env, fill in DB_HOST / OLLAMA_HOST / AppIO paths, then run .\run.ps1"
+Write-Host "Next:  .\run.ps1"

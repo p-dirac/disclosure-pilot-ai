@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict yrMQPAoDc8SIFuzSmDiommIbTxaNsg6k3qIwfn5xI3R5nWOgCHu9ai9E9htccWo
+--\restrict yrMQPAoDc8SIFuzSmDiommIbTxaNsg6k3qIwfn5xI3R5nWOgCHu9ai9E9htccWo
 
 -- Dumped from database version 18.3
 -- Dumped by pg_dump version 18.3
@@ -27797,5 +27797,5 @@ ALTER TABLE ONLY bookkeeper.loans
 -- PostgreSQL database dump complete
 --
 
-\unrestrict yrMQPAoDc8SIFuzSmDiommIbTxaNsg6k3qIwfn5xI3R5nWOgCHu9ai9E9htccWo
+--\unrestrict yrMQPAoDc8SIFuzSmDiommIbTxaNsg6k3qIwfn5xI3R5nWOgCHu9ai9E9htccWo
 

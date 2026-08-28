@@ -393,11 +393,11 @@ describe("Prep10QPage", () => {
     expect(screen.getByLabelText(/quarter/i)).toBeInTheDocument();
   });
 
-  it("year dropdown contains current and 4 prior years", () => {
+  it("year dropdown contains current and 2 prior years", () => {
     render(<Prep10QPage />);
     const select = screen.getByLabelText(/year/i);
     const options = Array.from(select.querySelectorAll("option")).map(o => o.value);
-    expect(options.length).toBe(4); // current year + 3 prior years
+    expect(options.length).toBe(2); // current year + 1 prior years
   });
 
   it("quarter dropdown only shows Q1, Q2, Q3", () => {
@@ -556,11 +556,11 @@ describe("Prep10KPage", () => {
     expect(screen.queryByLabelText(/quarter/i)).not.toBeInTheDocument();
   });
 
-  it("year dropdown contains current and 4 prior years", () => {
+  it("year dropdown contains current and 1 or 3 prior years", () => {
     render(<Prep10KPage />);
     const select = screen.getByLabelText(/year/i);
     const options = Array.from(select.querySelectorAll("option"));
-    expect(options.length).toBe(4); // current year + 3 prior years
+    expect(options.length).toBe(2); // current year + 1 prior years
   });
 
   it("renders Save MD&A button", async () => {
