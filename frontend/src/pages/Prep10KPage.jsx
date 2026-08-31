@@ -228,7 +228,7 @@ export default function Prep10KPage() {
 
   const loadMDA = async () => {
     setLoad('mda', true)
-    setMsg('mda', { type: 'loading', text: 'Generating 10-K MD&A via AI (this may take a few minutes)...' })
+    setMsg('mda', { type: 'loading', text: 'Generating 10-K MD&A via AI (this may take several minutes)...' })
     try {
       const res = await tenKApi.getMDA(year, mdaContext)
       const html = marked.parse(res.data.narrative)
@@ -257,7 +257,7 @@ export default function Prep10KPage() {
 
   const loadNotes = async () => {
     setLoad('notes', true)
-    setMsg('notes', { type: 'loading', text: 'Generating Notes to Financial Statements via AI (this may take a few minutes)...' })
+    setMsg('notes', { type: 'loading', text: 'Generating Notes to Financial Statements via AI (this may take several minutes)...' })
     try {
       const res = await tenKApi.getNotes(year)
       const html = marked.parse(res.data.narrative)
