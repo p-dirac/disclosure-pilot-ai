@@ -169,25 +169,39 @@ GAAP_MAPPINGS: dict[str, dict] = {
                                          "type": "instant", "balance": "credit", "negate": False},
 
     # ── Income Statement — Revenue ───────────────────────────────────────────
-    # Hardware Sales / Software Sales are disaggregated via a custom
-    # dimension (tifx:ProductOrServiceAxis) rather than separate concepts.
-    # us-gaap:ProductRevenue and us-gaap:LicenseAndServiceRevenue don't exist
-    # in the 2026 taxonomy, and ad hoc substitutes like SalesRevenueGoodsNet
-    # are deprecated — but the standard revenue concept itself,
-    # RevenueFromContractWithCustomerExcludingAssessedTax, can legitimately
-    # be reported more than once in the same period as long as each instance
-    # is qualified by a distinct dimension member. Both facts share the
-    # SAME concept and context type as "Total Revenue" below, differing only
-    # by the [Axis]=[Member] segment — that's what disaggregates them
-    # without inventing a non-existent GAAP concept.
+    # Hardware Sales / Software Sales / Consulting are disaggregated via a
+    # custom dimension (tifx:RevenueProductOrServiceAxis — renamed from
+    # tifx:ProductOrServiceAxis, which collided with the base taxonomy's own
+    # srt:ProductOrServiceAxis per EFM.6.07.16) rather than separate
+    # concepts. us-gaap:ProductRevenue and us-gaap:LicenseAndServiceRevenue
+    # don't exist in the 2026 taxonomy, and ad hoc substitutes like
+    # SalesRevenueGoodsNet are deprecated — but the standard revenue concept
+    # itself, RevenueFromContractWithCustomerExcludingAssessedTax, can
+    # legitimately be reported more than once in the same period as long as
+    # each instance is qualified by a distinct dimension member. All three
+    # facts share the SAME concept and context type as "Total Revenue"
+    # below, differing only by the [Axis]=[Member] segment — that's what
+    # disaggregates them without inventing a non-existent GAAP concept.
+    #
+    # "consulting" previously had NO dimension tuple here, which meant it
+    # was tagged as an undimensioned (default-context) fact of this same
+    # concept — i.e. indistinguishable from a "total" in that context.
+    # DQC.US.0117.9574 then compared that undimensioned $1,562,000
+    # Consulting figure against the Hardware+Software dimensional sum as if
+    # it SHOULD equal their total, which it was never meant to. Consulting
+    # is a genuine third disaggregation member, not the total — it now gets
+    # its own member (tifx:ConsultingMember) exactly like Hardware/Software,
+    # so the three members are each independently dimensioned and none of
+    # them is mistaken for the aggregate.
     "hardware sales":                   {"concept": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
                                          "type": "duration", "balance": "credit", "negate": False,
-                                         "dimension": ("tifx:ProductOrServiceAxis", "tifx:HardwareMember")},
+                                         "dimension": ("tifx:RevenueProductOrServiceAxis", "tifx:HardwareMember")},
     "software sales":                   {"concept": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
                                          "type": "duration", "balance": "credit", "negate": False,
-                                         "dimension": ("tifx:ProductOrServiceAxis", "tifx:SoftwareMember")},
+                                         "dimension": ("tifx:RevenueProductOrServiceAxis", "tifx:SoftwareMember")},
     "consulting":                       {"concept": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
-                                         "type": "duration", "balance": "credit", "negate": False},
+                                         "type": "duration", "balance": "credit", "negate": False,
+                                         "dimension": ("tifx:RevenueProductOrServiceAxis", "tifx:ConsultingMember")},
     "total revenue":                    {"concept": "us-gaap:Revenues",
                                          "type": "duration", "balance": "credit", "negate": False},
 
@@ -269,11 +283,11 @@ GAAP_MAPPINGS: dict[str, dict] = {
     "depreciation and amortization":    {"concept": "us-gaap:DepreciationDepletionAndAmortization",
                                          "type": "duration", "balance": "debit",  "negate": False},
     "changes in accounts receivable":   {"concept": "us-gaap:IncreaseDecreaseInAccountsReceivable",
-                                         "type": "duration", "balance": "credit", "negate": "display"},
+                                         "type": "duration", "balance": "credit", "negate": "display_invert"},
     "changes in inventory":             {"concept": "us-gaap:IncreaseDecreaseInInventories",
-                                         "type": "duration", "balance": "credit", "negate": "display"},
+                                         "type": "duration", "balance": "credit", "negate": "display_invert"},
     "changes in prepaid expenses":      {"concept": "us-gaap:IncreaseDecreaseInPrepaidDeferredExpenseAndOtherAssets",
-                                         "type": "duration", "balance": "credit", "negate": "display"},
+                                         "type": "duration", "balance": "credit", "negate": "display_invert"},
     "changes in accounts payable":      {"concept": "us-gaap:IncreaseDecreaseInAccountsPayable",
                                          "type": "duration", "balance": "debit",  "negate": "display"},
     "changes in accrued liabilities":   {"concept": "us-gaap:IncreaseDecreaseInAccruedLiabilities",
@@ -290,10 +304,33 @@ GAAP_MAPPINGS: dict[str, dict] = {
                                          "type": "duration", "balance": "credit", "negate": False},
     "net cash from investing activities": {"concept": "us-gaap:NetCashProvidedByUsedInInvestingActivities",
                                          "type": "duration", "balance": "debit",  "negate": "display"},
+    # DQC.US.0015.2820: Proceeds-from-debt concepts have NO negated label —
+    # they represent cash actually received and must always be tagged
+    # non-negative, regardless of how the source HTML happens to
+    # parenthesize the row. "display" mode (which trusts the source's
+    # parens as the sign) let a parenthesized net-financing presentation
+    # leak through as a negative ProceedsFromIssuanceOfLongTermDebt value
+    # for both years in the log. Fixed sign (False = always positive) is
+    # the correct mode for both proceeds rows, same as "issuance of common
+    # stock" below.
+    # UPDATE: financial_service.py's build_cash_flow() now splits gross
+    # proceeds from gross repayments for both debt accounts (see
+    # _acct_gross_by_name), rather than netting new-borrowing against
+    # repayments into one signed figure. That resolves DQC.US.0015.2820 at
+    # the root instead of via a sign trade-off: ProceedsFromShortTermDebt /
+    # ProceedsFromIssuanceOfLongTermDebt are now ALWAYS the gross new-
+    # borrowing amount alone, which is by construction never negative, so
+    # "negate": False (always positive) is correct and safe again -- no
+    # data-dependent sign needed here anymore. The repayment side of each
+    # account gets its own separate, always-non-negative concept below.
     "proceeds from short-term debt":    {"concept": "us-gaap:ProceedsFromShortTermDebt",
-                                         "type": "duration", "balance": "debit",  "negate": "display"},
+                                         "type": "duration", "balance": "credit", "negate": False},
+    "repayments of short-term debt":    {"concept": "us-gaap:RepaymentsOfShortTermDebt",
+                                         "type": "duration", "balance": "debit",  "negate": False},
     "proceeds from long-term debt":     {"concept": "us-gaap:ProceedsFromIssuanceOfLongTermDebt",
-                                         "type": "duration", "balance": "debit",  "negate": "display"},
+                                         "type": "duration", "balance": "credit", "negate": False},
+    "repayments of long-term debt":     {"concept": "us-gaap:RepaymentsOfLongTermDebt",
+                                         "type": "duration", "balance": "debit",  "negate": False},
     "issuance of common stock":         {"concept": "us-gaap:ProceedsFromIssuanceOfCommonStock",
                                          "type": "duration", "balance": "debit",  "negate": False},
     "purchase of treasury stock":       {"concept": "us-gaap:PaymentsForRepurchaseOfCommonStock",
@@ -351,7 +388,7 @@ class ContextRegistry:
                                  dimension: str, member: str) -> str:
         """
         Return (creating if needed) a duration context qualified by one
-        explicit-member dimension, e.g. tifx:ProductOrServiceAxis =
+        explicit-member dimension, e.g. tifx:RevenueProductOrServiceAxis =
         tifx:HardwareMember — used to disaggregate a single us-gaap concept
         (like RevenueFromContractWithCustomerExcludingAssessedTax) into
         multiple facts sharing the same concept and period but distinguished
@@ -359,7 +396,7 @@ class ContextRegistry:
         product line.
 
         dimension / member are QNames exactly as they should appear in the
-        instance, e.g. "tifx:ProductOrServiceAxis" / "tifx:HardwareMember".
+        instance, e.g. "tifx:RevenueProductOrServiceAxis" / "tifx:HardwareMember".
         """
         member_local = member.split(":")[-1]
         key = f"ctx_dur_{start.replace('-','')}_{end.replace('-','')}_{member_local}"
@@ -373,7 +410,8 @@ class ContextRegistry:
     def render_xbrl_header(self, entity_name: str, ticker: str, currency: str,
                             taxonomy_year: int = 2026,
                             skip_concepts: Optional[set] = None,
-                            business_info: Optional[dict] = None) -> str:
+                            business_info: Optional[dict] = None,
+                            form_type: str = "10-K") -> str:
         """
         Return the full <ix:header> … </ix:header> block as a raw XML string.
 
@@ -399,8 +437,20 @@ class ContextRegistry:
         """
         skip_concepts = skip_concepts or set()
         biz = business_info or {}
+        is_10k = (form_type != "10-Q")
         # Derive a datestamp for the extension XSD filename (e.g. 20251231)
         period_end_clean = self.period_end.replace('-', '')
+
+        # EFM.6.05.20 / DQC.US.0006.14: DocumentFiscalPeriodFocus must match
+        # the actual duration of the period being reported. Fiscal year end
+        # is hardcoded to Dec 31 below (CurrentFiscalYearEndDate = "--12-31"),
+        # so for a 10-Q the fiscal quarter is simply ceil(period_end month / 3).
+        # A 10-K's period is always the full fiscal year, so it's always "FY".
+        if is_10k:
+            fiscal_period_focus = "FY"
+        else:
+            period_end_month = int(self.period_end[5:7])
+            fiscal_period_focus = f"Q{(period_end_month - 1) // 3 + 1}"
 
         # The extension XSD (tifx-20251231.xsd) is named for the FISCAL YEAR
         # END, and is the single taxonomy file shared by the 10-K and every
@@ -447,7 +497,7 @@ class ContextRegistry:
             # DEI cover facts — all required by the Cover presentation group.
             # Using the full-year duration context for string/text facts.
             f'    <ix:nonNumeric name="dei:DocumentType" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">10-K</ix:nonNumeric>',
+            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{form_type}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:AmendmentFlag" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">false</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:DocumentPeriodEndDate" '
@@ -459,13 +509,15 @@ class ContextRegistry:
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{self.cik}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:DocumentFiscalYearFocus" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{self.period_end[:4]}</ix:nonNumeric>',
+            # EFM.6.05.20 / DQC.US.0006.14: required non-empty in every
+            # submission's Required Context, and must match the actual
+            # reported period duration — "FY" for a 10-K, "Q1"/"Q2"/"Q3"
+            # for a 10-Q (computed above as fiscal_period_focus).
+            f'    <ix:nonNumeric name="dei:DocumentFiscalPeriodFocus" '
+            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{fiscal_period_focus}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:CurrentFiscalYearEndDate" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">--12-31</ix:nonNumeric>',
-            f'    <ix:nonNumeric name="dei:DocumentAnnualReport" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">true</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:DocumentTransitionReport" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">false</ix:nonNumeric>',
-            f'    <ix:nonNumeric name="dei:DocumentFinStmtErrorCorrectionFlag" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">false</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:EntityFilerCategory" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{filer_category_display}</ix:nonNumeric>',
@@ -475,18 +527,40 @@ class ContextRegistry:
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{str(is_emerging_growth).lower()}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:EntityShellCompany" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{str(is_shell_company).lower()}</ix:nonNumeric>',
-            f'    <ix:nonNumeric name="dei:EntityVoluntaryFilers" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(is_voluntary_filer)}</ix:nonNumeric>',
-            f'    <ix:nonNumeric name="dei:EntityWellKnownSeasonedIssuer" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(is_wksi)}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:EntityCurrentReportingStatus" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(filed_all_reports)}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:EntityInteractiveDataCurrent" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(submitted_idata)}</ix:nonNumeric>',
-            # EntityPublicFloat and EntityCommonStockSharesOutstanding use instant context
-            f'    <ix:nonFraction name="dei:EntityPublicFloat" '
-            f'contextRef="ctx_instant_{self.period_end.replace("-","")}" '
-            f'unitRef="USD" decimals="0">{aggregate_market_value}</ix:nonFraction>',
+        ] + (
+            # ── Annual-only DEI facts ────────────────────────────────────────
+            # EFM.6.05.21 / 6.05.49: EDGAR rejects these concepts outright on
+            # a 10-Q submission ("Submission type 10-Q should not have a
+            # value for ..."), so they are only ever emitted for a 10-K.
+            [
+                f'    <ix:nonNumeric name="dei:DocumentAnnualReport" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">true</ix:nonNumeric>',
+                f'    <ix:nonNumeric name="dei:DocumentFinStmtErrorCorrectionFlag" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">false</ix:nonNumeric>',
+                # EFM.6.05.21: required in the SAME context as EntityFilerCategory
+                # whenever that value is "Accelerated Filer" or "Large
+                # Accelerated Filer" (SOX 404(b) auditor attestation applies).
+                # Defaults to True for those two categories, False otherwise;
+                # override via business_info.toml's icfr_auditor_attestation key
+                # if a given filer's actual attestation status differs.
+                f'    <ix:nonNumeric name="dei:IcfrAuditorAttestationFlag" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">'
+                f'{str(biz.get("icfr_auditor_attestation", filer_category_key in ("accelerated", "large_accelerated"))).lower()}'
+                f'</ix:nonNumeric>',
+                f'    <ix:nonNumeric name="dei:EntityVoluntaryFilers" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(is_voluntary_filer)}</ix:nonNumeric>',
+                f'    <ix:nonNumeric name="dei:EntityWellKnownSeasonedIssuer" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{_yn(is_wksi)}</ix:nonNumeric>',
+                # EntityPublicFloat uses instant context
+                f'    <ix:nonFraction name="dei:EntityPublicFloat" '
+                f'contextRef="ctx_instant_{self.period_end.replace("-","")}" '
+                f'unitRef="USD" decimals="0">{aggregate_market_value}</ix:nonFraction>',
+            ] if is_10k else []
+        ) + [
             f'    <ix:nonFraction name="dei:EntityCommonStockSharesOutstanding" '
             f'contextRef="ctx_instant_{self.period_end.replace("-","")}" '
             f'unitRef="shares" decimals="0">{shares_outstanding}</ix:nonFraction>',
@@ -509,16 +583,22 @@ class ContextRegistry:
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("area_code", "410")}</ix:nonNumeric>',
             f'    <ix:nonNumeric name="dei:LocalPhoneNumber" '
             f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("local_phone_number", "555-9900")}</ix:nonNumeric>',
-            # Auditor facts (required for 10-K per EFM 6.05.54)
-            f'    <ix:nonNumeric name="dei:AuditorName" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_firm", "Clarity Accounting")}</ix:nonNumeric>',
-            f'    <ix:nonNumeric name="dei:AuditorLocation" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_location", "Columbia, MD")}</ix:nonNumeric>',
-            # AuditorFirmId is a token (string) type — NOT numeric. No unitRef/decimals.
-            # Value must be a positive integer matching PCAOB firm ID pattern [1-9][0-9]*
-            # Update auditor_firm_id in business_info.toml with your actual PCAOB ID.
-            f'    <ix:nonNumeric name="dei:AuditorFirmId" '
-            f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_firm_id", "99")}</ix:nonNumeric>',
+        ] + (
+            # Auditor facts — EFM.6.05.54 requires these for a 10-K, and
+            # EFM.6.05.54.*Unexpected REJECTS them on a 10-Q, so only emit
+            # for a 10-K.
+            [
+                f'    <ix:nonNumeric name="dei:AuditorName" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_firm", "Clarity Accounting")}</ix:nonNumeric>',
+                f'    <ix:nonNumeric name="dei:AuditorLocation" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_location", "Columbia, MD")}</ix:nonNumeric>',
+                # AuditorFirmId is a token (string) type — NOT numeric. No unitRef/decimals.
+                # Value must be a positive integer matching PCAOB firm ID pattern [1-9][0-9]*
+                # Update auditor_firm_id in business_info.toml with your actual PCAOB ID.
+                f'    <ix:nonNumeric name="dei:AuditorFirmId" '
+                f'contextRef="ctx_dur_{self.period_start.replace("-","")}_{self.period_end.replace("-","")}">{biz.get("auditor_firm_id", "99")}</ix:nonNumeric>',
+            ] if is_10k else []
+        ) + [
             '  </ix:hidden>',
             '  <ix:references>',
             # EDGAR requires schemaRef entries for BOTH us-gaap AND dei namespaces.
@@ -661,6 +741,36 @@ def _format_xbrl_value(raw: int, negate, raw_txt: str = ""):
     docx_service.py already rendered (parens = negative), so that's what
     gets trusted here instead of a negate flag.
 
+    negate is the string "display_invert" for the ASSET-side cash-flow
+    reconciling lines (Changes in Accounts Receivable / Inventory /
+    Prepaid Expenses) specifically. These are a special case of
+    data-dependent sign, but in the OPPOSITE direction from plain
+    "display": financial_service.py's build_cash_flow() already bakes in
+    the CASH-FLOW-DIRECTION sign for these three (increase in the asset
+    -> negative, since that's a use of cash -- see its own "Debit-normal
+    asset; increase = cash use (negative)" comments), so the source
+    Python value and rendered display text are already negative exactly
+    when the asset increased. But the GAAP concepts themselves
+    (IncreaseDecreaseInAccountsReceivable etc.) are documented the other
+    way around: positive means the asset INCREASED, independent of cash
+    direction -- the cash-flow calculation linkbase's weight="-1.0" (see
+    tifx-20251231_cal.xml) is what converts that GAAP-positive increase
+    into a negative contribution to operating cash, not the fact's own
+    sign. Tagging these three with plain "display" doubles up with that
+    -1 weight (both the fact's sign AND the calc weight flip the same
+    direction), which is exactly what caused
+    calc11e:inconsistentCalculationUsingRounding to report a computed sum
+    roughly (2x the AR+Inventory+Prepaid contributions) larger than the
+    tagged total. "display_invert" reads the same parens-based sign as
+    "display" but flips the conclusion, restoring the GAAP-convention
+    sign so the fact and the -1 calc weight each do their own job exactly
+    once.
+    Liability-side reconciling lines (AP, Accrued Liabilities, Deferred/
+    Unearned Revenue) do NOT need this: for a credit-normal liability,
+    financial_service.py's "increase = cash source (positive)" happens to
+    already match the GAAP "increase is positive" convention, so plain
+    "display" is correct for those three as-is.
+
     The ixt:num-dot-decimal transform accepts comma thousands-separators
     — parsing them back out is exactly what this transform is for — so
     the displayed/tagged content can (and should) keep the human-readable
@@ -681,6 +791,10 @@ def _format_xbrl_value(raw: int, negate, raw_txt: str = ""):
         stripped = raw_txt.strip()
         is_neg = stripped.startswith("(") or stripped.startswith("$(")
         v = -raw if is_neg else raw
+    elif negate == "display_invert":
+        stripped = raw_txt.strip()
+        is_neg = stripped.startswith("(") or stripped.startswith("$(")
+        v = raw if is_neg else -raw
     else:
         v = -raw if negate else raw
     if v < 0:
@@ -860,7 +974,7 @@ def _tag_table(table: Tag, registry: ContextRegistry,
         # of (or in addition to) using a distinct concept, e.g. Hardware
         # Sales / Software Sales both use
         # us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax but
-        # are distinguished by tifx:ProductOrServiceAxis.
+        # are distinguished by tifx:RevenueProductOrServiceAxis.
         dimension = mapping.get("dimension")
 
         # data cells: skip the label cell (index 0). Build ONE distinct
@@ -2544,7 +2658,7 @@ def tag_filing(
         # Using period_end here is the same bug as the schemaRef href above:
         # a 10-Q's period_end (e.g. 2025-06-30) would declare a namespace that
         # doesn't match the schema's targetNamespace, breaking every tifx:-
-        # prefixed extension concept/dimension (e.g. tifx:ProductOrServiceAxis).
+        # prefixed extension concept/dimension (e.g. tifx:RevenueProductOrServiceAxis).
         fiscal_year_end_clean = f"{period_end[:4]}1231"
         html_tag[f"xmlns:{ticker_lower}"] = f"http://www.{ticker_lower}.com/{fiscal_year_end_clean}"
 
@@ -2609,6 +2723,7 @@ def tag_filing(
         entity_name, ticker, currency, taxonomy_year,
         skip_concepts=cover_tagged_concepts | auditor_tagged_concepts,
         business_info=biz,
+        form_type=form_type,
     )
 
     # [ix11.8.1.2:headerDisplayNone]: ix:header must be inside a <div style="display:none">

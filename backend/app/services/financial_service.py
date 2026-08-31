@@ -207,6 +207,49 @@ def get_gl_balances_range(
     return result
 
 
+def _acct_gross_by_name(db: Session, acct_name: str, start: date, end: date) -> tuple[float, float]:
+    """
+    Like _acct_range_by_name, but returns the two directions of period
+    activity SEPARATELY instead of netting them: (increase, decrease),
+    both as non-negative magnitudes, where "increase" means activity in
+    the account's own normal-balance direction (credit activity for a
+    credit-normal account, debit activity for a debit-normal account) and
+    "decrease" means the opposite. increase - decrease always equals what
+    _acct_range_by_name returns for the same account/period.
+
+    Needed for debt accounts specifically: a single GL account tracking
+    "Long-term Debt" nets new borrowing (credit) against repayments
+    (debit) into one figure, but the GAAP concepts
+    ProceedsFromIssuanceOfLongTermDebt / RepaymentsOfLongTermDebt are two
+    separate, always-non-negative concepts -- there's no single "net debt
+    activity" concept to tag. Netting them into one signed value (as
+    _acct_range_by_name does) works fine for display, but produces
+    exactly the situation DQC.US.0015.2820 flags whenever repayments
+    exceed new borrowing in a period: a "Proceeds" concept the rule
+    expects to never be negative ends up negative anyway.
+    """
+    stmt = text("""
+        SELECT
+            coa.normal_balance,
+            COALESCE(SUM(gl.debit),  0) AS total_debit,
+            COALESCE(SUM(gl.credit), 0) AS total_credit
+        FROM bookkeeper.general_ledger gl
+        JOIN bookkeeper.chart_of_acct coa ON coa.account_number = gl.account_number
+        WHERE gl.entry_date BETWEEN :start AND :end
+          AND coa.account_name ILIKE :name
+        GROUP BY coa.normal_balance
+    """)
+    increase, decrease = 0.0, 0.0
+    for r in db.execute(stmt, {"start": start, "end": end, "name": acct_name}).fetchall():
+        if r.normal_balance == "Debit":
+            increase += float(r.total_debit)
+            decrease += float(r.total_credit)
+        else:
+            increase += float(r.total_credit)
+            decrease += float(r.total_debit)
+    return increase, decrease
+
+
 def _acct_range_by_name(db: Session, acct_name: str, start: date, end: date) -> float:
     """
     Period activity for a named account (matched by account_name ILIKE),
@@ -611,6 +654,9 @@ def build_cash_flow(
     def _named_acct_range(acct_name: str, start: date, end: date) -> float:
         return _acct_range_by_name(db, acct_name, start, end)
 
+    def _named_acct_gross(acct_name: str, start: date, end: date) -> tuple[float, float]:
+        return _acct_gross_by_name(db, acct_name, start, end)
+
     def _p2(fn, *args, **kwargs):
         """Call fn only when prior2 period is requested."""
         return fn(*args, **kwargs) if prior2_start else None
@@ -800,15 +846,28 @@ def build_cash_flow(
     p2_inv_total  = ((p2_capex or 0) + (p2_sti or 0)) if prior2_start else None
 
     # ── FINANCING ─────────────────────────────────────────────────────────────
-    # Short-term debt: Credit-normal; net credit = proceeds (positive)
-    cur_st_debt = _named_acct_range("Short-term Debt", current_start, current_end)
-    pri_st_debt = _named_acct_range("Short-term Debt", prior_start,   prior_end)
-    p2_st_debt  = _p2(_named_acct_range, "Short-term Debt", prior2_start, prior2_end)
+    # Short-term debt: Credit-normal. Split into gross proceeds (new
+    # borrowing) and gross repayments rather than netting them into one
+    # signed figure -- ProceedsFromShortTermDebt and RepaymentsOfShortTermDebt
+    # are two separate, always-non-negative GAAP concepts; there's no single
+    # "net debt activity" concept to tag one net value against. See
+    # _acct_gross_by_name's docstring for why (DQC.US.0015.2820).
+    cur_st_proceeds, cur_st_repay = _named_acct_gross("Short-term Debt", current_start, current_end)
+    pri_st_proceeds, pri_st_repay = _named_acct_gross("Short-term Debt", prior_start,   prior_end)
+    p2_st_gross  = _p2(_named_acct_gross, "Short-term Debt", prior2_start, prior2_end)
+    p2_st_proceeds, p2_st_repay = p2_st_gross if p2_st_gross else (None, None)
+    cur_st_debt = cur_st_proceeds - cur_st_repay   # net, still used for cur_fin_total below
+    pri_st_debt = pri_st_proceeds - pri_st_repay
+    p2_st_debt  = (p2_st_proceeds - p2_st_repay) if prior2_start else None
 
-    # Long-term debt: Credit-normal; net credit = proceeds (positive)
-    cur_lt_debt = _named_acct_range("Long-term Debt", current_start, current_end)
-    pri_lt_debt = _named_acct_range("Long-term Debt", prior_start,   prior_end)
-    p2_lt_debt  = _p2(_named_acct_range, "Long-term Debt", prior2_start, prior2_end)
+    # Long-term debt: same split as short-term, same reason.
+    cur_lt_proceeds, cur_lt_repay = _named_acct_gross("Long-term Debt", current_start, current_end)
+    pri_lt_proceeds, pri_lt_repay = _named_acct_gross("Long-term Debt", prior_start,   prior_end)
+    p2_lt_gross  = _p2(_named_acct_gross, "Long-term Debt", prior2_start, prior2_end)
+    p2_lt_proceeds, p2_lt_repay = p2_lt_gross if p2_lt_gross else (None, None)
+    cur_lt_debt = cur_lt_proceeds - cur_lt_repay
+    pri_lt_debt = pri_lt_proceeds - pri_lt_repay
+    p2_lt_debt  = (p2_lt_proceeds - p2_lt_repay) if prior2_start else None
 
     # Common stock issuance: Credit-normal equity
     cur_stock = _named_acct_range("Common Stock", current_start, current_end)
@@ -889,8 +948,10 @@ def build_cash_flow(
         _row("Purchase of Property, Plant & Equip",    cur_capex,        pri_capex,        p2_capex),
         _row("Net Cash from Investing Activities",     cur_inv_total,    pri_inv_total,    p2_inv_total),
         _row("CASH FLOWS FROM FINANCING ACTIVITIES",   0,                0,                0 if prior2_start else None),
-        _row("Proceeds from Short-term Debt",          cur_st_debt,      pri_st_debt,      p2_st_debt),
-        _row("Proceeds from Long-term Debt",           cur_lt_debt,      pri_lt_debt,      p2_lt_debt),
+        _row("Proceeds from Short-term Debt",          cur_st_proceeds,  pri_st_proceeds,  p2_st_proceeds),
+        _row("Repayments of Short-term Debt",          -cur_st_repay,    -pri_st_repay,     -p2_st_repay if prior2_start else None),
+        _row("Proceeds from Long-term Debt",           cur_lt_proceeds,  pri_lt_proceeds,  p2_lt_proceeds),
+        _row("Repayments of Long-term Debt",           -cur_lt_repay,    -pri_lt_repay,     -p2_lt_repay if prior2_start else None),
         _row("Issuance of Common Stock",               cur_stock,        pri_stock,        p2_stock),
         _row("Purchase of Treasury Stock",             cur_treasury,     pri_treasury,     p2_treasury),
         _row("Dividends Paid",                         cur_div,          pri_div,          p2_div),
