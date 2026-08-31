@@ -37,7 +37,7 @@ Disclosure Pilot AI is a full-stack desktop application that demonstrates using 
 
 ---
 
-**Installation & Setup**
+**Installation Overview**
 
 1. **Clone the Repository**
 Open Windows PowerShell (standard user, non-admin) and run:
