@@ -234,7 +234,7 @@ export default function Prep10QPage() {
 
   const loadMDA = async () => {
     setLoad('mda', true)
-    setMsg('mda', { type: 'loading', text: 'Generating MD&A via AI (this may take a moment)...' })
+    setMsg('mda', { type: 'loading', text: 'Generating MD&A via AI (this may take a few minutes)...' })
     try {
       const res = await tenQApi.getMDA(year, quarter, mdaContext)
       const html = marked.parse(res.data.narrative)
@@ -263,7 +263,7 @@ export default function Prep10QPage() {
 
   const loadNotes = async () => {
     setLoad('notes', true)
-    setMsg('notes', { type: 'loading', text: 'Generating Notes to Financial Statements via AI (this may take a moment)...' })
+    setMsg('notes', { type: 'loading', text: 'Generating Notes to Financial Statements via AI (this may take a few minutes)...' })
     try {
       const res = await tenQApi.getNotes(year, quarter)
       const html = marked.parse(res.data.narrative)
